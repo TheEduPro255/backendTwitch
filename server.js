@@ -8,6 +8,8 @@ const app = express();
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const PORT = process.env.PORT || 3000;
+// const scope = "user:read:email";
+
 
 app.get("/", async (req, res) => {
 
@@ -84,10 +86,7 @@ app.get("/callback", async (req, res) => {
 
         const accessToken = tokenResponse.data.access_token;
 
-        res.json({
-            message: "Usuario autenticado correctamente",
-            access_token: accessToken
-        });
+        res.redirect("pruebasapp://auth?token=" + accessToken);
 
     } catch (err) {
         console.error(err.response?.data || err.message);

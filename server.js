@@ -54,7 +54,7 @@ app.get("/", async (req, res) => {
 
 app.get("/login", (req, res) => {
     const client_id = process.env.CLIENT_ID;
-    const redirect_uri = "http://localhost:3000/callback";
+    const redirect_uri = "https://twitchappbackend-1.onrender.com//callback";
     const scope = "user:read:email";
 
     const authUrl =
@@ -78,7 +78,7 @@ app.get("/callback", async (req, res) => {
                 client_secret: process.env.CLIENT_SECRET,
                 code: code,
                 grant_type: "authorization_code",
-                redirect_uri: "http://localhost:3000/callback"
+                redirect_uri: "https://twitchappbackend-1.onrender.com//callback"
             })
         );
 

@@ -79,25 +79,16 @@ app.get("/", async (req, res) => {
 
 app.get("/login", (req, res) => {
 
-    console.log("Entra en /login");
-
-    const scope = "user:read:email";
-
     const authUrl =
-        `https://id.twitch.tv/oauth2/authorize` +
-        `?client_id=${CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-        `&response_type=code` +
-        `&scope=${encodeURIComponent(scope)}` +
-        `&force_verify=true`;
+        "https://id.twitch.tv/oauth2/authorize" +
+        "?client_id=" + CLIENT_ID +
+        "&redirect_uri=" + encodeURIComponent(REDIRECT_URI) +
+        "&response_type=code";
 
-    console.log("AUTH URL:");
     console.log(authUrl);
 
-    // REDIRECT DIRECTO A TWITCH
     res.redirect(authUrl);
 });
-
 
 
 /*

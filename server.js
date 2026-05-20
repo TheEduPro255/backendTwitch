@@ -11,7 +11,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const PORT = process.env.PORT || 3000;
 
 const REDIRECT_URI =
-    "https://twitchappbackend-1.onrender.com/callback";
+    "https://backendtwitch.onrender.com/callback";
 
 
 

@@ -109,104 +109,28 @@ app.get("/login", (req, res) => {
 app.get("/callback", async (req, res) => {
 
     console.log("Entra en /callback");
+    console.log("QUERY COMPLETA:", req.query);
 
     const code = req.query.code;
+    const error = req.query.error;
 
-    console.log("CODE:");
-    console.log(code);
+    if (error) {
+        return res.send(`
+            <h1>OAuth error</h1>
+            <p>${error}</p>
+            <pre>${JSON.stringify(req.query, null, 2)}</pre>
+        `);
+    }
 
     if (!code) {
-
-        return res.status(400).json({
-            error: "No code received"
-        });
-    }
-
-    try {
-
-        // INTERCAMBIO CODE -> ACCESS TOKEN
-        const tokenResponse = await axios.post(
-            "https://id.twitch.tv/oauth2/token",
-            new URLSearchParams({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                code: code,
-                grant_type: "authorization_code",
-                redirect_uri: REDIRECT_URI
-            }),
-            {
-                headers: {
-                    "Content-Type":
-                        "application/x-www-form-urlencoded"
-                }
-            }
-        );
-
-        const accessToken =
-            tokenResponse.data.access_token;
-
-        console.log("ACCESS TOKEN:");
-        console.log(accessToken);
-
-        // OPCIONAL -> DATOS USER
-        const userResponse = await axios.get(
-            "https://api.twitch.tv/helix/users",
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${accessToken}`
-                }
-            }
-        );
-
-        console.log("USER:");
-        console.log(userResponse.data);
-
-        // REDIRECT A APP ANDROID
-        res.send(`
-        <html>
-
-        <head>
-            <title>Login Twitch</title>
-        </head>
-
-        <body style="
-            background:#0B0B12;
-            color:white;
-            font-family:sans-serif;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-            flex-direction:column;
-        ">
-
-            <h1>✅ Login correcto</h1>
-
-            <p>Redirigiendo a la app...</p>
-
-            <script>
-                window.location.href =
-                    "pruebasapp://auth?token=${accessToken}";
-            </script>
-
-        </body>
-
-        </html>
+        return res.send(`
+            <h1>No code received</h1>
+            <pre>${JSON.stringify(req.query, null, 2)}</pre>
         `);
-
-    } catch (err) {
-
-        console.error(
-            err.response?.data || err.message
-        );
-
-        res.status(500).json({
-            error: "Auth failed"
-        });
     }
-});
 
+    res.send("OK");
+});
 
 
 /*

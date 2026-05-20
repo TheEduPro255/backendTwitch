@@ -5,21 +5,29 @@ const axios = require("axios");
 
 const app = express();
 
-
-
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
 const PORT = process.env.PORT || 3000;
-const redirect_uri = "https://twitchappbackend-1.onrender.com/callback";
 
-// const scope = "user:read:email";
+const REDIRECT_URI =
+    "https://twitchappbackend-1.onrender.com/callback";
 
+
+
+/*
+|--------------------------------------------------------------------------
+| TEST API
+|--------------------------------------------------------------------------
+*/
 
 app.get("/", async (req, res) => {
 
     console.log("Entra en /");
+
     try {
 
+        // TOKEN APP
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
             null,
@@ -34,8 +42,9 @@ app.get("/", async (req, res) => {
 
         const accessToken = tokenResponse.data.access_token;
 
-        console.log("TOKEN:", accessToken);
+        console.log("TOKEN APP:", accessToken);
 
+        // EJEMPLO API TWITCH
         const twitchResponse = await axios.get(
             "https://api.twitch.tv/helix/games/top",
             {
@@ -50,7 +59,9 @@ app.get("/", async (req, res) => {
 
     } catch (err) {
 
-        console.error(err.response?.data  || err.message);
+        console.error(
+            err.response?.data || err.message
+        );
 
         res.status(500).json({
             error: "Algo salió mal"
@@ -59,88 +70,154 @@ app.get("/", async (req, res) => {
 });
 
 
-app.get("/login", (req, res) => {
-    const client_id = process.env.CLIENT_ID;
-    const scope = "user:read:email";
-        console.log("Entra en /login");
 
+/*
+|--------------------------------------------------------------------------
+| LOGIN TWITCH
+|--------------------------------------------------------------------------
+*/
+
+app.get("/login", (req, res) => {
+
+    console.log("Entra en /login");
+
+    const scope = "user:read:email";
 
     const authUrl =
         `https://id.twitch.tv/oauth2/authorize` +
-        `?client_id=${client_id}` +
-        `&redirect_uri=${redirect_uri}` +
-        `&response_type=code `+
-        `&scope=${scope}`+
+        `?client_id=${CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+        `&response_type=code` +
+        `&scope=${encodeURIComponent(scope)}` +
         `&force_verify=true`;
-res.send(
-        <html>
-        <head>
-            <title>Login Twitch</title>
-        </head>
-        <body>
-            <h1>Login con Twitch</h1>
-            <a href="${authUrl}">
-                <button>Iniciar sesión</button>
-            </a>
-        </body>
-        </html>
-    );
+
+    console.log("AUTH URL:");
+    console.log(authUrl);
+
+    // REDIRECT DIRECTO A TWITCH
+    res.redirect(authUrl);
 });
 
 
+
+/*
+|--------------------------------------------------------------------------
+| CALLBACK TWITCH
+|--------------------------------------------------------------------------
+*/
+
 app.get("/callback", async (req, res) => {
-        console.log("Entra en /callback");
+
+    console.log("Entra en /callback");
 
     const code = req.query.code;
 
+    console.log("CODE:");
+    console.log(code);
+
+    if (!code) {
+
+        return res.status(400).json({
+            error: "No code received"
+        });
+    }
+
     try {
+
+        // INTERCAMBIO CODE -> ACCESS TOKEN
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
             new URLSearchParams({
-                client_id: process.env.CLIENT_ID,
-                client_secret: process.env.CLIENT_SECRET,
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
                 code: code,
                 grant_type: "authorization_code",
-                redirect_uri: "https://twitchappbackend-1.onrender.com/callback"
-            })
+                redirect_uri: REDIRECT_URI
+            }),
+            {
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded"
+                }
+            }
         );
 
-        const accessToken = tokenResponse.data.access_token;
+        const accessToken =
+            tokenResponse.data.access_token;
 
+        console.log("ACCESS TOKEN:");
+        console.log(accessToken);
 
-res.send(
-<html>
-<head>
-    <title>Login completado</title>
-</head>
-<body>
-    <h1>✅ Login Twitch correcto</h1>
-    <p>Pulsa para volver a la app</p>
+        // OPCIONAL -> DATOS USER
+        const userResponse = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${accessToken}`
+                }
+            }
+        );
 
-    <a href="pruebasapp://auth?token=${accessToken}">
-        <button>Volver a la app</button>
-    </a>
+        console.log("USER:");
+        console.log(userResponse.data);
 
-    <script>
-        // intento automático
-        window.location.href = "pruebasapp://auth?token=${accessToken}";
-    </script>
-</body>
-</html>
-);
+        // REDIRECT A APP ANDROID
+        res.send(`
+        <html>
 
- 
+        <head>
+            <title>Login Twitch</title>
+        </head>
+
+        <body style="
+            background:#0B0B12;
+            color:white;
+            font-family:sans-serif;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            flex-direction:column;
+        ">
+
+            <h1>✅ Login correcto</h1>
+
+            <p>Redirigiendo a la app...</p>
+
+            <script>
+                window.location.href =
+                    "pruebasapp://auth?token=${accessToken}";
+            </script>
+
+        </body>
+
+        </html>
+        `);
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.status(500).json({ error: "Auth failed" });
+
+        console.error(
+            err.response?.data || err.message
+        );
+
+        res.status(500).json({
+            error: "Auth failed"
+        });
     }
 });
 
 
 
-
+/*
+|--------------------------------------------------------------------------
+| START SERVER
+|--------------------------------------------------------------------------
+*/
 
 app.listen(PORT, () => {
-    console.log("Servidor iniciado en puerto "+PORT);
+
+    console.log(
+        "Servidor iniciado en puerto " + PORT
+    );
 });

@@ -10,71 +10,17 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 const PORT = process.env.PORT || 3000;
 
-const REDIRECT_URI =
-    "https://backendtwitch.onrender.com/callback";
-
-/*
-|--------------------------------------------------------------------------
-| TEST API
-|--------------------------------------------------------------------------
-*/
-
-app.get("/", async (req, res) => {
-
-    console.log("Entra en /");
-
-    try {
-
-        const tokenResponse = await axios.post(
-            "https://id.twitch.tv/oauth2/token",
-            null,
-            {
-                params: {
-                    client_id: CLIENT_ID,
-                    client_secret: CLIENT_SECRET,
-                    grant_type: "client_credentials"
-                }
-            }
-        );
-
-        const accessToken =
-            tokenResponse.data.access_token;
-
-        const twitchResponse = await axios.get(
-            "https://api.twitch.tv/helix/games/top",
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${accessToken}`
-                }
-            }
-        );
-
-        res.json(twitchResponse.data);
-
-    } catch (err) {
-
-        console.error(
-            err.response?.data || err.message
-        );
-
-        res.status(500).json({
-            error: "Algo salió mal"
-        });
-    }
-});
+const REDIRECT_URI = "https://backendtwitch.onrender.com/callback";
 
 /*
 |--------------------------------------------------------------------------
 | LOGIN TWITCH
 |--------------------------------------------------------------------------
 */
-
 app.get("/login", (req, res) => {
 
-    console.log("Entra en /login");
-
-    const scope = "user:read:email";
+    const scope =
+        "user:read:email user:read:follows";
 
     const authUrl =
         `https://id.twitch.tv/oauth2/authorize` +
@@ -84,25 +30,20 @@ app.get("/login", (req, res) => {
         `&scope=${encodeURIComponent(scope)}` +
         `&force_verify=true`;
 
-    console.log(authUrl);
-
     res.redirect(authUrl);
 });
 
+
 /*
 |--------------------------------------------------------------------------
-| CALLBACK TWITCH
+| CALLBACK TWITCH (OAuth → token + user)
 |--------------------------------------------------------------------------
 */
-
 app.get("/callback", async (req, res) => {
-
-    console.log("Entra en /callback");
 
     const code = req.query.code;
 
     if (!code) {
-
         return res.status(400).json({
             error: "No code received"
         });
@@ -110,15 +51,9 @@ app.get("/callback", async (req, res) => {
 
     try {
 
-        /*
-        |--------------------------------------------------------------------------
-        | INTERCAMBIO CODE → TOKEN
-        |--------------------------------------------------------------------------
-        */
-
+        // 1. code → access token
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
-
             new URLSearchParams({
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
@@ -126,7 +61,6 @@ app.get("/callback", async (req, res) => {
                 grant_type: "authorization_code",
                 redirect_uri: REDIRECT_URI
             }),
-
             {
                 headers: {
                     "Content-Type":
@@ -138,15 +72,7 @@ app.get("/callback", async (req, res) => {
         const accessToken =
             tokenResponse.data.access_token;
 
-        console.log("TOKEN:");
-        console.log(accessToken);
-
-        /*
-        |--------------------------------------------------------------------------
-        | DATOS DEL USUARIO
-        |--------------------------------------------------------------------------
-        */
-
+        // 2. user info
         const userResponse = await axios.get(
             "https://api.twitch.tv/helix/users",
             {
@@ -157,84 +83,47 @@ app.get("/callback", async (req, res) => {
             }
         );
 
-        const user =
-            userResponse.data.data[0];
+        const user = userResponse.data.data[0];
 
-        console.log("USER:");
-        console.log(user);
+        const userId = user.id;
+        const username = user.display_name;
+        const avatar = user.profile_image_url;
 
-        const username =
-            user.display_name;
-
-        const avatar =
-            user.profile_image_url;
-
-        const email =
-            user.email;
-
-        /*
-        |--------------------------------------------------------------------------
-        | DEEP LINK → ANDROID
-        |--------------------------------------------------------------------------
-        */
-
+        // 3. deep link Android
         const deepLink =
             `pruebasapp://auth` +
             `?token=${encodeURIComponent(accessToken)}` +
+            `&userId=${encodeURIComponent(userId)}` +
             `&username=${encodeURIComponent(username)}` +
-            `&avatar=${encodeURIComponent(avatar)}` +
-            `&email=${encodeURIComponent(email)}`;
+            `&avatar=${encodeURIComponent(avatar)}`;
 
-        console.log("DEEP LINK:");
-        console.log(deepLink);
-
-        /*
-        |--------------------------------------------------------------------------
-        | RESPUESTA HTML
-        |--------------------------------------------------------------------------
-        */
-
+        // 4. redirect app
         res.send(`
-        <html>
+            <html>
+            <body style="
+                background:#0B0B12;
+                color:white;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                height:100vh;
+                font-family:sans-serif;
+                flex-direction:column;
+            ">
 
-        <head>
+                <h2>Login correcto</h2>
+                <p>Redirigiendo a la app...</p>
 
-            <title>Login Twitch</title>
+                <script>
+                    window.location.href = "${deepLink}";
+                </script>
 
-        </head>
-
-        <body style="
-            background:#0B0B12;
-            color:white;
-            font-family:sans-serif;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-            flex-direction:column;
-        ">
-
-            <h1>✅ Login correcto</h1>
-
-            <p>Redirigiendo a la app...</p>
-
-            <script>
-
-                window.location.href =
-                    "${deepLink}";
-
-            </script>
-
-        </body>
-
-        </html>
+            </body>
+            </html>
         `);
 
     } catch (err) {
-
-        console.error(
-            err.response?.data || err.message
-        );
+        console.error(err.response?.data || err.message);
 
         res.status(500).json({
             error: "Auth failed"
@@ -242,15 +131,179 @@ app.get("/callback", async (req, res) => {
     }
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| USER INFO (Android → refrescar datos usuario)
+|--------------------------------------------------------------------------
+*/
+app.get("/me", async (req, res) => {
+
+    const token = req.headers.authorization;
+
+    if (!token) {
+        return res.status(401).json({
+            error: "No token"
+        });
+    }
+
+    try {
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                }
+            }
+        );
+
+        res.json(response.data);
+
+    } catch (err) {
+        res.status(500).json({
+            error: "Error fetching user"
+        });
+    }
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| STREAMERS SEGUIDOS (IMPORTANTE)
+|--------------------------------------------------------------------------
+*/
+app.get("/followed", async (req, res) => {
+
+    const token = req.headers.authorization;
+    const userId = req.query.userId;
+
+    if (!token || !userId) {
+        return res.status(400).json({
+            error: "Missing data"
+        });
+    }
+
+    try {
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/channels/followed",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    user_id: userId,
+                    first: 20
+                }
+            }
+        );
+
+        res.json(response.data);
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error fetching follows"
+        });
+    }
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| EVENTOS (MOCK → FUTURO BD)
+|--------------------------------------------------------------------------
+*/
+app.get("/events", async (req, res) => {
+
+    res.json({
+        events: [
+            {
+                id: 1,
+                title: "Meet & Greet Madrid",
+                date: "2026-06-21",
+                streamer: "AlexLive"
+            }
+        ]
+    });
+});
+
+app.get("/followed-full", async (req, res) => {
+
+    const token = req.headers.authorization;
+    const userId = req.query.userId;
+
+    if (!token || !userId) {
+        return res.status(400).json({ error: "Missing data" });
+    }
+
+    try {
+
+        // 1. FOLLOWED
+        const followsRes = await axios.get(
+            "https://api.twitch.tv/helix/channels/followed",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    user_id: userId,
+                    first: 20
+                }
+            }
+        );
+
+        const follows = followsRes.data.data;
+
+        const ids = follows.map(f => f.broadcaster_id);
+
+        if (ids.length === 0) {
+            return res.json([]);
+        }
+
+        // 2. USERS INFO (AVATARS + NAMES)
+        const usersRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    id: ids
+                }
+            }
+        );
+
+        const users = usersRes.data.data;
+
+        // 3. MERGE
+        const result = users.map(u => ({
+            id: u.id,
+            name: u.display_name,
+            avatar: u.profile_image_url
+        }));
+
+        res.json(result);
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error building full follows"
+        });
+    }
+});
 /*
 |--------------------------------------------------------------------------
 | START SERVER
 |--------------------------------------------------------------------------
 */
-
 app.listen(PORT, () => {
-
-    console.log(
-        "Servidor iniciado en puerto " + PORT
-    );
+    console.log("Servidor iniciado en puerto " + PORT);
 });

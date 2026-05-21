@@ -13,8 +13,6 @@ const PORT = process.env.PORT || 3000;
 const REDIRECT_URI =
     "https://backendtwitch.onrender.com/callback";
 
-
-
 /*
 |--------------------------------------------------------------------------
 | TEST API
@@ -27,7 +25,6 @@ app.get("/", async (req, res) => {
 
     try {
 
-        // TOKEN APP
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
             null,
@@ -40,11 +37,9 @@ app.get("/", async (req, res) => {
             }
         );
 
-        const accessToken = tokenResponse.data.access_token;
+        const accessToken =
+            tokenResponse.data.access_token;
 
-        console.log("TOKEN APP:", accessToken);
-
-        // EJEMPLO API TWITCH
         const twitchResponse = await axios.get(
             "https://api.twitch.tv/helix/games/top",
             {
@@ -69,8 +64,6 @@ app.get("/", async (req, res) => {
     }
 });
 
-
-
 /*
 |--------------------------------------------------------------------------
 | LOGIN TWITCH
@@ -91,14 +84,10 @@ app.get("/login", (req, res) => {
         `&scope=${encodeURIComponent(scope)}` +
         `&force_verify=true`;
 
-    console.log("AUTH URL:");
     console.log(authUrl);
 
-    // REDIRECT DIRECTO A TWITCH
     res.redirect(authUrl);
 });
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -112,9 +101,6 @@ app.get("/callback", async (req, res) => {
 
     const code = req.query.code;
 
-    console.log("CODE:");
-    console.log(code);
-
     if (!code) {
 
         return res.status(400).json({
@@ -124,9 +110,15 @@ app.get("/callback", async (req, res) => {
 
     try {
 
-        // INTERCAMBIO CODE -> ACCESS TOKEN
+        /*
+        |--------------------------------------------------------------------------
+        | INTERCAMBIO CODE → TOKEN
+        |--------------------------------------------------------------------------
+        */
+
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
+
             new URLSearchParams({
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
@@ -134,6 +126,7 @@ app.get("/callback", async (req, res) => {
                 grant_type: "authorization_code",
                 redirect_uri: REDIRECT_URI
             }),
+
             {
                 headers: {
                     "Content-Type":
@@ -145,10 +138,15 @@ app.get("/callback", async (req, res) => {
         const accessToken =
             tokenResponse.data.access_token;
 
-        console.log("ACCESS TOKEN:");
+        console.log("TOKEN:");
         console.log(accessToken);
 
-        // OPCIONAL -> DATOS USER
+        /*
+        |--------------------------------------------------------------------------
+        | DATOS DEL USUARIO
+        |--------------------------------------------------------------------------
+        */
+
         const userResponse = await axios.get(
             "https://api.twitch.tv/helix/users",
             {
@@ -159,15 +157,50 @@ app.get("/callback", async (req, res) => {
             }
         );
 
-        console.log("USER:");
-        console.log(userResponse.data);
+        const user =
+            userResponse.data.data[0];
 
-        // REDIRECT A APP ANDROID
+        console.log("USER:");
+        console.log(user);
+
+        const username =
+            user.display_name;
+
+        const avatar =
+            user.profile_image_url;
+
+        const email =
+            user.email;
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEEP LINK → ANDROID
+        |--------------------------------------------------------------------------
+        */
+
+        const deepLink =
+            `pruebasapp://auth` +
+            `?token=${encodeURIComponent(accessToken)}` +
+            `&username=${encodeURIComponent(username)}` +
+            `&avatar=${encodeURIComponent(avatar)}` +
+            `&email=${encodeURIComponent(email)}`;
+
+        console.log("DEEP LINK:");
+        console.log(deepLink);
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPUESTA HTML
+        |--------------------------------------------------------------------------
+        */
+
         res.send(`
         <html>
 
         <head>
+
             <title>Login Twitch</title>
+
         </head>
 
         <body style="
@@ -186,8 +219,10 @@ app.get("/callback", async (req, res) => {
             <p>Redirigiendo a la app...</p>
 
             <script>
+
                 window.location.href =
-                    "pruebasapp://auth?token=${accessToken}";
+                    "${deepLink}";
+
             </script>
 
         </body>
@@ -206,8 +241,6 @@ app.get("/callback", async (req, res) => {
         });
     }
 });
-
-
 
 /*
 |--------------------------------------------------------------------------

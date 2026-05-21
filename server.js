@@ -253,7 +253,7 @@ app.get("/events/latest", async (req, res) => {
             return res.status(400).json({ error: "Missing data" });
         }
 
-        // 1. follows Twitch
+        // 1. obtener streamers seguidos
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
             {
@@ -275,16 +275,17 @@ app.get("/events/latest", async (req, res) => {
             return res.json(null);
         }
 
-        // 2. IMPORTANTE: excluir eventos propios
+        // 2. 🔥 CLAVE: excluir eventos creados por el usuario logueado
         const events = await Event.find({
             streamerId: { $in: followIds },
-            userId: { $ne: userId }   // 🔥 CLAVE
+            userId: { $ne: userId }
         }).sort({ createdAt: -1 });
 
         if (events.length === 0) {
             return res.json(null);
         }
 
+        // 3. devolver el más reciente válido
         return res.json(events[0]);
 
     } catch (err) {

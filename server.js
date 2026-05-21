@@ -286,8 +286,9 @@ app.get("/followed-full", async (req, res) => {
 |--------------------------------------------------------------------------
 */
 app.post("/events", async (req, res) => {
-
     try {
+
+        console.log("BODY RECIBIDO:", req.body);
 
         const {
             title,
@@ -301,6 +302,7 @@ app.post("/events", async (req, res) => {
         } = req.body;
 
         if (!title || !date || !time || !streamerId || !streamerName || !streamerAvatar || !userId) {
+            console.log("❌ FALTAN CAMPOS");
             return res.status(400).json({ error: "Missing fields" });
         }
 
@@ -318,8 +320,8 @@ app.post("/events", async (req, res) => {
         res.json(event);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Error creating event" });
+        console.error("🔥 ERROR CREANDO EVENTO:", err);
+        res.status(500).json({ error: "Error creando evento" });
     }
 });
 

@@ -247,15 +247,10 @@ app.get("/events/latest", async (req, res) => {
     try {
 
         const userId = req.query.userId;
-
-        if (!userId) {
-            return res.status(400).json({ error: "Missing userId" });
-        }
-
         const auth = req.headers.authorization;
 
-        if (!auth) {
-            return res.status(400).json({ error: "Missing token" });
+        if (!userId || !auth) {
+            return res.status(400).json({ error: "Missing data" });
         }
 
         // 1. follows Twitch
@@ -273,23 +268,18 @@ app.get("/events/latest", async (req, res) => {
             }
         );
 
-        const followIds =
-            (followsRes.data.data || [])
-                .map(f => String(f.broadcaster_id));
+        const followIds = (followsRes.data.data || [])
+            .map(f => String(f.broadcaster_id));
 
         if (followIds.length === 0) {
             return res.json(null);
         }
 
-        // 2. debug útil (IMPORTANTE)
-        console.log("FOLLOW IDS:", followIds);
-
-        // 3. eventos filtrados
+        // 2. IMPORTANTE: excluir eventos propios
         const events = await Event.find({
-            streamerId: { $in: followIds }
+            streamerId: { $in: followIds },
+            userId: { $ne: userId }   // 🔥 CLAVE
         }).sort({ createdAt: -1 });
-
-        console.log("EVENTS FOUND:", events.length);
 
         if (events.length === 0) {
             return res.json(null);
@@ -299,9 +289,7 @@ app.get("/events/latest", async (req, res) => {
 
     } catch (err) {
 
-        console.error(
-            err.response?.data || err.message
-        );
+        console.error(err.response?.data || err.message);
 
         res.status(500).json({
             error: "Error latest event"

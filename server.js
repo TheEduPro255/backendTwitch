@@ -233,6 +233,23 @@ app.get("/events", async (req, res) => {
     }
 });
 
+app.get("/events/latest", async (req, res) => {
+    try {
+        const { userId } = req.query;
+
+        const filter = userId ? { userId } : {};
+
+        const event = await Event.findOne(filter)
+            .sort({ createdAt: -1 }); // 🔥 el último creado
+
+        res.json(event);
+
+    } catch (err) {
+        res.status(500).json({ error: "Error latest event" });
+    }
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER

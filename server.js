@@ -40,18 +40,51 @@ mongoose.connect(MONGO_URI)
 |--------------------------------------------------------------------------
 */
 const eventSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    description: { type: String, default: "" },
-    date: { type: String, required: true },
-    time: { type: String, required: true },
 
-    streamerId: { type: String, required: true },
-    streamerName: { type: String, required: true },
-    streamerAvatar: { type: String, required: true },
+    title: {
+        type: String,
+        required: true
+    },
 
-    userId: { type: String, required: true },
+    description: {
+        type: String,
+        default: ""
+    },
 
-    createdAt: { type: Date, default: Date.now }
+    date: {
+        type: String,
+        required: true
+    },
+
+    time: {
+        type: String,
+        required: true
+    },
+
+    streamerId: {
+        type: String,
+        required: true
+    },
+
+    streamerName: {
+        type: String,
+        required: true
+    },
+
+    streamerAvatar: {
+        type: String,
+        required: true
+    },
+
+    userId: {
+        type: String,
+        required: true
+    },
+
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 const Event = mongoose.model("Event", eventSchema);
@@ -86,14 +119,17 @@ app.get("/callback", async (req, res) => {
     const code = req.query.code;
 
     if (!code) {
-        return res.status(400).json({ error: "No code" });
+        return res.status(400).json({
+            error: "No code"
+        });
     }
 
     try {
 
-        // 1. TOKEN
+        // TOKEN
         const tokenResponse = await axios.post(
             "https://id.twitch.tv/oauth2/token",
+
             new URLSearchParams({
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
@@ -101,6 +137,7 @@ app.get("/callback", async (req, res) => {
                 grant_type: "authorization_code",
                 redirect_uri: REDIRECT_URI
             }),
+
             {
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded"
@@ -108,11 +145,13 @@ app.get("/callback", async (req, res) => {
             }
         );
 
-        const accessToken = tokenResponse.data.access_token;
+        const accessToken =
+            tokenResponse.data.access_token;
 
-        // 2. USER TWITCH
+        // USER
         const userResponse = await axios.get(
             "https://api.twitch.tv/helix/users",
+
             {
                 headers: {
                     "Client-Id": CLIENT_ID,
@@ -121,8 +160,10 @@ app.get("/callback", async (req, res) => {
             }
         );
 
-        const user = userResponse.data.data[0];
+        const user =
+            userResponse.data.data[0];
 
+        // DEEP LINK
         const deepLink =
             `pruebasapp://auth` +
             `?token=${encodeURIComponent(accessToken)}` +
@@ -132,9 +173,16 @@ app.get("/callback", async (req, res) => {
 
         res.send(`
             <html>
-            <body style="background:#0B0B12;color:white;
-            display:flex;justify-content:center;align-items:center;
-            height:100vh;font-family:sans-serif;flex-direction:column">
+            <body style="
+                background:#0B0B12;
+                color:white;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                height:100vh;
+                font-family:sans-serif;
+                flex-direction:column
+            ">
 
                 <h2>Login correcto</h2>
                 <p>Redirigiendo...</p>
@@ -148,37 +196,56 @@ app.get("/callback", async (req, res) => {
         `);
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.status(500).json({ error: "Auth failed" });
+
+        console.error(
+            err.response?.data || err.message
+        );
+
+        res.status(500).json({
+            error: "Auth failed"
+        });
     }
 });
 
 /*
 |--------------------------------------------------------------------------
-| CREATE EVENT (ANDROID)
+| CREATE EVENT
 |--------------------------------------------------------------------------
 */
 app.post("/events", async (req, res) => {
 
     try {
 
-        console.log("BODY RECIBIDO:", req.body);
-
-        const token = req.headers.authorization?.replace("Bearer ", "");
+        const token =
+            req.headers.authorization?.replace(
+                "Bearer ",
+                ""
+            );
 
         if (!token) {
-            return res.status(401).json({ error: "No token" });
+            return res.status(401).json({
+                error: "No token"
+            });
         }
 
-        const { title, description, date, time } = req.body;
+        const {
+            title,
+            description,
+            date,
+            time
+        } = req.body;
 
         if (!title || !date || !time) {
-            return res.status(400).json({ error: "Missing fields" });
+
+            return res.status(400).json({
+                error: "Missing fields"
+            });
         }
 
-        // 🔥 OBTENER USUARIO TWITCH (NO CONFIAR EN ANDROID)
+        // USER TWITCH
         const userResponse = await axios.get(
             "https://api.twitch.tv/helix/users",
+
             {
                 headers: {
                     "Client-Id": CLIENT_ID,
@@ -187,9 +254,12 @@ app.post("/events", async (req, res) => {
             }
         );
 
-        const user = userResponse.data.data[0];
+        const user =
+            userResponse.data.data[0];
 
+        // CREATE EVENT
         const newEvent = await Event.create({
+
             title,
             description: description || "",
             date,
@@ -205,8 +275,15 @@ app.post("/events", async (req, res) => {
         res.json(newEvent);
 
     } catch (err) {
-        console.error("🔥 ERROR:", err.response?.data || err.message);
-        res.status(500).json({ error: "Error creando evento" });
+
+        console.error(
+            "🔥 ERROR:",
+            err.response?.data || err.message
+        );
+
+        res.status(500).json({
+            error: "Error creando evento"
+        });
     }
 });
 
@@ -221,7 +298,8 @@ app.get("/events", async (req, res) => {
 
         const { userId } = req.query;
 
-        const filter = userId ? { userId } : {};
+        const filter =
+            userId ? { userId } : {};
 
         const events = await Event.find(filter)
             .sort({ createdAt: -1 });
@@ -229,23 +307,32 @@ app.get("/events", async (req, res) => {
         res.json(events);
 
     } catch (err) {
-        res.status(500).json({ error: "Error events" });
+
+        res.status(500).json({
+            error: "Error events"
+        });
     }
 });
 
+/*
+|--------------------------------------------------------------------------
+| GET LATEST EVENT
+|--------------------------------------------------------------------------
+*/
 app.get("/events/latest", async (req, res) => {
+
     try {
-        const { userId } = req.query;
 
-        const filter = userId ? { userId } : {};
+        const latestEvent = await Event.findOne()
+            .sort({ createdAt: -1 });
 
-        const event = await Event.findOne(filter)
-            .sort({ createdAt: -1 }); // 🔥 el último creado
-
-        res.json(event);
+        res.json(latestEvent);
 
     } catch (err) {
-        res.status(500).json({ error: "Error latest event" });
+
+        res.status(500).json({
+            error: "Error latest event"
+        });
     }
 });
 
@@ -256,10 +343,14 @@ app.get("/events/latest", async (req, res) => {
 */
 app.get("/followed-full", async (req, res) => {
 
-    const token = req.headers.authorization;
-    const userId = req.query.userId;
+    const token =
+        req.headers.authorization;
+
+    const userId =
+        req.query.userId;
 
     if (!token || !userId) {
+
         return res.status(400).json({
             error: "Missing data"
         });
@@ -267,14 +358,16 @@ app.get("/followed-full", async (req, res) => {
 
     try {
 
-        // 1. Obtener follows
+        // FOLLOWS
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
+
             {
                 headers: {
                     "Client-Id": CLIENT_ID,
                     "Authorization": token
                 },
+
                 params: {
                     user_id: userId,
                     first: 20
@@ -282,66 +375,81 @@ app.get("/followed-full", async (req, res) => {
             }
         );
 
-        const follows = followsRes.data.data;
+        const follows =
+            followsRes.data.data;
 
-        const ids = follows.map(f => f.broadcaster_id);
+        const ids =
+            follows.map(f => f.broadcaster_id);
 
         if (ids.length === 0) {
             return res.json([]);
         }
 
-        // 2. Obtener info usuarios
+        // USERS
         const usersRes = await axios.get(
             "https://api.twitch.tv/helix/users",
+
             {
                 headers: {
                     "Client-Id": CLIENT_ID,
                     "Authorization": token
                 },
+
                 params: {
                     id: ids
                 }
             }
         );
 
-        const users = usersRes.data.data;
+        const users =
+            usersRes.data.data;
 
-        // 3. Formatear
-        // 🔥 Obtener streams en directo
-const streamsRes = await axios.get(
-    "https://api.twitch.tv/helix/streams",
-    {
-        headers: {
-            "Client-Id": CLIENT_ID,
-            "Authorization": token
-        },
-        params: {
-            user_id: ids
-        }
-    }
-);
+        // STREAMS LIVE
+        const streamsRes = await axios.get(
+            "https://api.twitch.tv/helix/streams",
 
-const liveIds = streamsRes.data.data.map(s => s.user_id);
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
 
-// RESULTADO FINAL
-const result = users.map(u => ({
-    id: u.id,
-    name: u.display_name,
-    avatar: u.profile_image_url,
-    isLive: liveIds.includes(u.id)
-}));
+                params: {
+                    user_id: ids
+                }
+            }
+        );
+
+        const liveIds =
+            streamsRes.data.data.map(
+                s => s.user_id
+            );
+
+        // RESULT
+        const result = users.map(u => ({
+
+            id: u.id,
+
+            name: u.display_name,
+
+            avatar: u.profile_image_url,
+
+            isLive: liveIds.includes(u.id)
+        }));
+
         res.json(result);
 
     } catch (err) {
 
-        console.error(err.response?.data || err.message);
+        console.error(
+            err.response?.data || err.message
+        );
 
         res.status(500).json({
             error: "Error full follows"
         });
     }
 });
-
 
 /*
 |--------------------------------------------------------------------------

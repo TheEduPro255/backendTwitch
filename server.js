@@ -248,13 +248,23 @@ app.get("/events/latest", async (req, res) => {
 
         const userId = req.query.userId;
 
-        // 1. obtener follows del usuario
+        if (!userId) {
+            return res.status(400).json({ error: "Missing userId" });
+        }
+
+        const auth = req.headers.authorization;
+
+        if (!auth) {
+            return res.status(400).json({ error: "Missing token" });
+        }
+
+        // 1. follows Twitch
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
             {
                 headers: {
                     "Client-Id": CLIENT_ID,
-                    "Authorization": req.headers.authorization
+                    "Authorization": auth
                 },
                 params: {
                     user_id: userId,
@@ -263,23 +273,39 @@ app.get("/events/latest", async (req, res) => {
             }
         );
 
-        const followIds = followsRes.data.data.map(f => f.broadcaster_id);
+        const followIds =
+            (followsRes.data.data || [])
+                .map(f => String(f.broadcaster_id));
 
-        // 2. buscar eventos SOLO de streamers seguidos
-        let events = await Event.find({
-            streamerId: { $in: followIds }
-        }).sort({ createdAt: -1 });
-
-        if (!events.length) {
+        if (followIds.length === 0) {
             return res.json(null);
         }
 
-        // 3. devolver el más reciente
-        res.json(events[0]);
+        // 2. debug útil (IMPORTANTE)
+        console.log("FOLLOW IDS:", followIds);
+
+        // 3. eventos filtrados
+        const events = await Event.find({
+            streamerId: { $in: followIds }
+        }).sort({ createdAt: -1 });
+
+        console.log("EVENTS FOUND:", events.length);
+
+        if (events.length === 0) {
+            return res.json(null);
+        }
+
+        return res.json(events[0]);
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.status(500).json({ error: "Error latest event" });
+
+        console.error(
+            err.response?.data || err.message
+        );
+
+        res.status(500).json({
+            error: "Error latest event"
+        });
     }
 });
 

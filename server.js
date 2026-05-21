@@ -451,6 +451,47 @@ app.get("/followed-full", async (req, res) => {
     }
 });
 
+app.get("/events/following/:userId", async (req, res) => {
+
+    try {
+
+        const { userId } = req.params;
+
+        // 1. obtener follows de Twitch
+        const followsRes = await axios.get(
+            "https://api.twitch.tv/helix/channels/followed",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": req.headers.authorization
+                },
+                params: {
+                    user_id: userId,
+                    first: 100
+                }
+            }
+        );
+
+        const followIds = followsRes.data.data.map(f => f.broadcaster_id);
+
+        // 2. traer eventos SOLO de esos streamers
+        const events = await Event.find({
+            streamerId: { $in: followIds }
+        }).sort({ createdAt: -1 });
+
+        res.json(events);
+
+    } catch (err) {
+
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error getting following events"
+        });
+    }
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER

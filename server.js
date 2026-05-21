@@ -1,7 +1,26 @@
 require("dotenv").config();
 
 const express = require("express");
+const mongoose = require("mongoose");
 const axios = require("axios");
+
+const eventSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    description: { type: String, default: "" },
+
+    date: { type: String, required: true }, // o ISO string
+    time: { type: String, required: true },
+
+    streamerId: { type: String, required: true },
+    streamerName: { type: String, required: true },
+    streamerAvatar: { type: String, required: true },
+
+    userId: { type: String, required: true }, // creador del evento
+
+    createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model("Event", eventSchema);
 
 const app = express();
 
@@ -11,6 +30,10 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const PORT = process.env.PORT || 3000;
 
 const REDIRECT_URI = "https://backendtwitch.onrender.com/callback";
+
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("✅ MongoDB conectado"))
+    .catch(err => console.error("❌ Error MongoDB:", err));
 
 /*
 |--------------------------------------------------------------------------
@@ -299,6 +322,80 @@ app.get("/followed-full", async (req, res) => {
         });
     }
 });
+
+
+const Event = require("./models/Event");
+
+app.post("/events", express.json(), async (req, res) => {
+    try {
+        const {
+            title,
+            description,
+            date,
+            time,
+            streamerId,
+            streamerName,
+            streamerAvatar,
+            userId
+        } = req.body;
+
+        if (
+            !title ||
+            !date ||
+            !time ||
+            !streamerId ||
+            !streamerName ||
+            !streamerAvatar ||
+            !userId
+        ) {
+            return res.status(400).json({
+                error: "Missing fields"
+            });
+        }
+
+        const event = await Event.create({
+            title,
+            description,
+            date,
+            time,
+            streamerId,
+            streamerName,
+            streamerAvatar,
+            userId
+        });
+
+        res.json(event);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: "Error creando evento"
+        });
+    }
+});
+
+app.get("/events", async (req, res) => {
+
+    const userId = req.query.userId;
+
+    try {
+
+        const filter = userId ? { userId } : {};
+
+        const events = await Event.find(filter)
+            .sort({ date: 1, time: 1 });
+
+        res.json(events);
+
+    } catch (err) {
+        res.status(500).json({
+            error: "Error obteniendo eventos"
+        });
+    }
+});
+
+
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER

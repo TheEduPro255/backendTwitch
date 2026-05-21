@@ -249,6 +249,82 @@ app.get("/events/latest", async (req, res) => {
     }
 });
 
+/*
+|--------------------------------------------------------------------------
+| FOLLOWED FULL
+|--------------------------------------------------------------------------
+*/
+app.get("/followed-full", async (req, res) => {
+
+    const token = req.headers.authorization;
+    const userId = req.query.userId;
+
+    if (!token || !userId) {
+        return res.status(400).json({
+            error: "Missing data"
+        });
+    }
+
+    try {
+
+        // 1. Obtener follows
+        const followsRes = await axios.get(
+            "https://api.twitch.tv/helix/channels/followed",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    user_id: userId,
+                    first: 20
+                }
+            }
+        );
+
+        const follows = followsRes.data.data;
+
+        const ids = follows.map(f => f.broadcaster_id);
+
+        if (ids.length === 0) {
+            return res.json([]);
+        }
+
+        // 2. Obtener info usuarios
+        const usersRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    id: ids
+                }
+            }
+        );
+
+        const users = usersRes.data.data;
+
+        // 3. Formatear
+        const result = users.map(u => ({
+            id: u.id,
+            name: u.display_name,
+            avatar: u.profile_image_url
+        }));
+
+        res.json(result);
+
+    } catch (err) {
+
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error full follows"
+        });
+    }
+});
+
 
 /*
 |--------------------------------------------------------------------------

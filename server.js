@@ -307,12 +307,29 @@ app.get("/followed-full", async (req, res) => {
         const users = usersRes.data.data;
 
         // 3. Formatear
-        const result = users.map(u => ({
-            id: u.id,
-            name: u.display_name,
-            avatar: u.profile_image_url
-        }));
+        // 🔥 Obtener streams en directo
+const streamsRes = await axios.get(
+    "https://api.twitch.tv/helix/streams",
+    {
+        headers: {
+            "Client-Id": CLIENT_ID,
+            "Authorization": token
+        },
+        params: {
+            user_id: ids
+        }
+    }
+);
 
+const liveIds = streamsRes.data.data.map(s => s.user_id);
+
+// RESULTADO FINAL
+const result = users.map(u => ({
+    id: u.id,
+    name: u.display_name,
+    avatar: u.profile_image_url,
+    isLive: liveIds.includes(u.id)
+}));
         res.json(result);
 
     } catch (err) {

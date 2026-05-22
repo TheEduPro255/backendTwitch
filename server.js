@@ -471,7 +471,7 @@ app.post("/follow", async (req, res) => {
         }
 
         // ------------------------------------------------
-        // USER ID (quien sigue)
+        // USER ID
         // ------------------------------------------------
         const userRes = await axios.get(
             "https://api.twitch.tv/helix/users",
@@ -485,23 +485,10 @@ app.post("/follow", async (req, res) => {
 
         const userId = userRes.data.data[0].id;
 
-       
-        await axios.post(
-            "https://api.twitch.tv/helix/users/follows",
-            null,
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${token}`
-                },
-                params: {
-                    from_id: userId,
-                    to_id: streamerId
-                }
-            }
-        );
-
-        await Favorite.findOneAndUpdate(
+        // ------------------------------------------------
+        // SOLO MONGO (FAVORITOS)
+        // ------------------------------------------------
+        const favorite = await Favorite.findOneAndUpdate(
             { userId, streamerId },
             {
                 userId,
@@ -512,19 +499,21 @@ app.post("/follow", async (req, res) => {
             { upsert: true, new: true }
         );
 
-        res.json({ success: true });
+        res.json({
+            success: true,
+            favorite
+        });
 
     } catch (err) {
 
-        console.log("🔥 FOLLOW ERROR:");
+        console.log("🔥 FAVORITE ERROR:");
         console.log(err.response?.data || err.message);
 
         res.status(500).json({
-            error: "Follow failed"
+            error: "Favorite failed"
         });
     }
 });
-
 /*
 |--------------------------------------------------------------------------
 | START

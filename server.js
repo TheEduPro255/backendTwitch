@@ -239,6 +239,43 @@ app.get("/followed-full", async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
+| GET EVENTS DEL STREAMER LOGUEADO
+|--------------------------------------------------------------------------
+*/
+app.get("/events", async (req, res) => {
+
+    try {
+
+        const userId = req.query.userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                error: "Missing userId"
+            });
+        }
+
+        // Buscar eventos creados por el usuario
+        const events = await Event.find({
+            userId: userId
+        }).sort({
+            createdAt: -1
+        });
+
+        res.json(events);
+
+    } catch (err) {
+
+        console.error(err.message);
+
+        res.status(500).json({
+            error: "Error obteniendo eventos"
+        });
+    }
+});
+
+
+/*
+|--------------------------------------------------------------------------
 | 🔥 EVENTO DESTACADO (CORREGIDO)
 |--------------------------------------------------------------------------
 */

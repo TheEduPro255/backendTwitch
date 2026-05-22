@@ -640,7 +640,7 @@ app.get("/followers", async (req, res) => {
                 }
             }
         );
-
+         console.log("🔥 FOLLOWERS RESPONSE:", followersRes.data);
         const total = followersRes.data?.total;
 
         if (typeof total !== "number") {

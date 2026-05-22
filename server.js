@@ -273,6 +273,29 @@ app.get("/events", async (req, res) => {
     }
 });
 
+/*
+|--------------------------------------------------------------------------
+| TODOS LOS EVENTOS
+|--------------------------------------------------------------------------
+*/
+app.get("/events/all", async (req, res) => {
+
+    try {
+
+        const events = await Event.find()
+            .sort({ createdAt: -1 });
+
+        res.json(events);
+
+    } catch (err) {
+
+        console.error(err.message);
+
+        res.status(500).json({
+            error: "Error obteniendo eventos"
+        });
+    }
+});
 
 /*
 |--------------------------------------------------------------------------

@@ -577,20 +577,13 @@ app.delete("/favorites", async (req, res) => {
 |--------------------------------------------------------------------------
 */
 app.get("/profile", async (req, res) => {
-
     try {
-
         const token = req.headers.authorization?.replace("Bearer ", "");
 
         if (!token) {
-            return res.status(401).json({
-                error: "No token"
-            });
+            return res.status(401).json({ error: "No token" });
         }
 
-        // ------------------------------------------------
-        // USER INFO
-        // ------------------------------------------------
         const userRes = await axios.get(
             "https://api.twitch.tv/helix/users",
             {
@@ -603,9 +596,37 @@ app.get("/profile", async (req, res) => {
 
         const user = userRes.data.data[0];
 
-        // ------------------------------------------------
-        // FOLLOWERS
-        // ------------------------------------------------
+        res.json({
+            id: user.id,
+            username: user.display_name,
+            avatar: user.profile_image_url,
+            bio: user.description || "",
+            createdAt: user.created_at,
+            followers: 0
+        });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error getting profile"
+        });
+    }
+});
+
+
+app.get("/followers", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const userId = req.query.userId;
+
+        if (!token || !userId) {
+            return res.status(400).json({
+                error: "Missing token or userId"
+            });
+        }
+
         const followersRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followers",
             {
@@ -614,23 +635,17 @@ app.get("/profile", async (req, res) => {
                     "Authorization": `Bearer ${token}`
                 },
                 params: {
-                    broadcaster_id: user.id
+                    broadcaster_id: userId,
+                    first: 1
                 }
             }
         );
 
-        const followers = followersRes.data.total || 0;
+        const total = followersRes.data?.total || 0;
 
-        // ------------------------------------------------
-        // RESPONSE
-        // ------------------------------------------------
         res.json({
-            id: user.id,
-            username: user.display_name,
-            avatar: user.profile_image_url,
-            bio: user.description || "",
-            createdAt: user.created_at,
-            followers: followers
+            userId,
+            followers: total
         });
 
     } catch (err) {
@@ -640,11 +655,10 @@ app.get("/profile", async (req, res) => {
         );
 
         res.status(500).json({
-            error: "Error getting profile"
+            error: "Error getting followers"
         });
     }
 });
-
 
 /*
 |--------------------------------------------------------------------------

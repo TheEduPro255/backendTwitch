@@ -414,6 +414,50 @@ app.get("/events/following", async (req, res) => {
     }
 });
 
+
+// ---------------- SEARCH STREAMERS ----------------
+app.get("/search-streamers", async (req, res) => {
+
+    try {
+
+        const query = req.query.q;
+        const token = req.headers.authorization?.replace("Bearer ", "");
+
+        if (!query || !token) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/search/channels",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    query: query,
+                    first: 20
+                }
+            }
+        );
+
+        const data = response.data.data || [];
+
+        const result = data.map(s => ({
+            id: s.broadcaster_id,
+            name: s.display_name,
+            avatar: s.thumbnail_url,
+            isLive: s.is_live
+        }));
+
+        res.json(result);
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Search error" });
+    }
+});
+
 // ---------------- START ----------------
 app.listen(PORT, () => {
     console.log("Servidor en puerto " + PORT);

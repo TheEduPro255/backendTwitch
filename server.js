@@ -472,19 +472,20 @@ app.post("/follow", async (req, res) => {
         const userId = userRes.data.data[0].id;
 
         await axios.post(
-            "https://api.twitch.tv/helix/users/follows",
-            {
-                from_id: userId,
-                to_id: streamerId
-            },
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            }
-        );
+    "https://api.twitch.tv/helix/users/follows",
+    null,
+    {
+        headers: {
+            "Client-Id": CLIENT_ID,
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+        params: {
+            from_id: userId,
+            to_id: streamerId
+        }
+    }
+);
 
         res.json({ success: true });
 

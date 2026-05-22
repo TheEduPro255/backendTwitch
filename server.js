@@ -330,6 +330,90 @@ app.get("/events/latest", async (req, res) => {
     }
 });
 
+app.get("/events/my", async (req, res) => {
+
+    try {
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        if (!token) return res.status(401).json({ error: "No token" });
+
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const user = userRes.data.data[0];
+
+        const events = await Event.find({
+            streamerId: user.id
+        });
+
+        res.json(events);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error getting my events" });
+    }
+});
+
+app.get("/events/following", async (req, res) => {
+
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const userId = req.query.userId;
+
+        if (!token || !userId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        // 1. obtener seguidos
+        const followsRes = await axios.get(
+            "https://api.twitch.tv/helix/channels/followed",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    user_id: userId,
+                    first: 100
+                }
+            }
+        );
+
+        const followIds = (followsRes.data.data || [])
+            .map(f => f.broadcaster_id);
+
+        if (!followIds.length) return res.json([]);
+
+        // 2. eventos de esos streamers
+        const events = await Event.find({
+            streamerId: { $in: followIds }
+        });
+
+        const now = new Date();
+
+        const filtered = events
+            .map(e => ({
+                ...e.toObject(),
+                eventDate: new Date(`${e.date}T${e.time}`)
+            }))
+            .filter(e => e.eventDate > now)
+            .sort((a, b) => a.eventDate - b.eventDate);
+
+        res.json(filtered);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error events following" });
+    }
+});
+
 // ---------------- START ----------------
 app.listen(PORT, () => {
     console.log("Servidor en puerto " + PORT);

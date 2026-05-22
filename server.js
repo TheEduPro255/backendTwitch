@@ -151,6 +151,7 @@ app.get("/profile", async (req, res) => {
         });
 
     } catch (err) {
+
         console.error("PROFILE ERROR:", err.response?.data || err.message);
 
         res.status(500).json({
@@ -159,54 +160,7 @@ app.get("/profile", async (req, res) => {
     }
 });
 
-// ---------------- FOLLOWERS (CORREGIDO) ----------------
-app.get("/followers", async (req, res) => {
 
-    try {
-
-        const token = req.headers.authorization?.replace("Bearer ", "");
-        const userId = req.query.userId;
-
-        if (!token || !userId) {
-            return res.status(400).json({
-                error: "Missing token or userId"
-            });
-        }
-
-        const followersRes = await axios.get(
-            "https://api.twitch.tv/helix/channels/followers",
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${token}`
-                },
-                params: {
-                    broadcaster_id: userId,
-                    first: 1
-                }
-            }
-        );
-
-        console.log("🔥 FOLLOWERS RAW:", followersRes.data);
-
-        const total = followersRes.data?.total;
-
-        return res.json({
-            userId,
-            followers: typeof total === "number" ? total : 0
-        });
-
-    } catch (err) {
-
-        console.error("❌ FOLLOWERS ERROR:");
-        console.error(err.response?.data || err.message);
-
-        return res.json({
-            userId: req.query.userId,
-            followers: 0
-        });
-    }
-});
 
 // ---------------- EVENTS ----------------
 app.post("/events", async (req, res) => {

@@ -242,6 +242,11 @@ app.get("/followed-full", async (req, res) => {
 | 🔥 EVENTO DESTACADO (CORREGIDO)
 |--------------------------------------------------------------------------
 */
+/*
+|--------------------------------------------------------------------------
+| EVENTO DESTACADO
+|--------------------------------------------------------------------------
+*/
 app.get("/events/latest", async (req, res) => {
 
     try {
@@ -253,7 +258,9 @@ app.get("/events/latest", async (req, res) => {
             return res.status(400).json({ error: "Missing data" });
         }
 
-        // 1. obtener streamers seguidos
+        // ---------------------------------------------------------
+        // 1. Obtener streamers seguidos
+        // ---------------------------------------------------------
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
             {
@@ -275,18 +282,55 @@ app.get("/events/latest", async (req, res) => {
             return res.json(null);
         }
 
-        // 2. 🔥 CLAVE: excluir eventos creados por el usuario logueado
+        // ---------------------------------------------------------
+        // 2. Buscar eventos válidos
+        // ---------------------------------------------------------
         const events = await Event.find({
             streamerId: { $in: followIds },
             userId: { $ne: userId }
-        }).sort({ createdAt: -1 });
+        });
 
-        if (events.length === 0) {
+        if (!events.length) {
             return res.json(null);
         }
 
-        // 3. devolver el más reciente válido
-        return res.json(events[0]);
+        // ---------------------------------------------------------
+        // 3. Filtrar eventos futuros
+        // ---------------------------------------------------------
+        const now = new Date();
+
+        const futureEvents = events
+            .map(event => {
+
+                // date = "2026-05-22"
+                // time = "20:30"
+
+                const eventDate = new Date(
+                    `${event.date}T${event.time}:00`
+                );
+
+                return {
+                    ...event.toObject(),
+                    eventDate
+                };
+            })
+            .filter(event => event.eventDate > now);
+
+        if (!futureEvents.length) {
+            return res.json(null);
+        }
+
+        // ---------------------------------------------------------
+        // 4. Ordenar por el más próximo
+        // ---------------------------------------------------------
+        futureEvents.sort(
+            (a, b) => a.eventDate - b.eventDate
+        );
+
+        // ---------------------------------------------------------
+        // 5. Devolver el más cercano
+        // ---------------------------------------------------------
+        return res.json(futureEvents[0]);
 
     } catch (err) {
 
@@ -297,7 +341,6 @@ app.get("/events/latest", async (req, res) => {
         });
     }
 });
-
 /*
 |--------------------------------------------------------------------------
 | START

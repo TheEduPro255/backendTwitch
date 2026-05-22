@@ -490,9 +490,15 @@ app.post("/follow", async (req, res) => {
         res.json({ success: true });
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
-        res.status(500).json({ error: "Follow failed" });
-    }
+    console.log("🔥 TWITCH FOLLOW ERROR FULL:");
+    console.log(err.response?.status);
+    console.log(err.response?.data);
+    console.log(err.message);
+
+    res.status(500).json({
+        error: err.response?.data || err.message
+    });
+}
 });
 
 

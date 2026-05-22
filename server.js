@@ -540,7 +540,7 @@ app.delete("/favorites", async (req, res) => {
     try {
 
         const token = req.headers.authorization?.replace("Bearer ", "");
-        const { streamerId } = req.body;
+        const { streamerId } = req.query;
 
         if (!token || !streamerId) {
             return res.status(400).json({ error: "Missing data" });

@@ -492,6 +492,23 @@ app.post("/follow", async (req, res) => {
     }
 });
 
+app.get("/favorites", async (req, res) => {
+    try {
+        const userId = req.query.userId;
+
+        if (!userId) {
+            return res.status(400).json({ error: "Missing userId" });
+        }
+
+        const favorites = await Favorite.find({ userId });
+
+        res.json(favorites);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error getting favorites" });
+    }
+});
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

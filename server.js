@@ -396,6 +396,59 @@ app.get("/events/latest", async (req, res) => {
         });
     }
 });
+
+/*
+|--------------------------------------------------------------------------
+| SEARCH STREAMERS
+|--------------------------------------------------------------------------
+*/
+app.get("/search-streamers", async (req, res) => {
+
+    try {
+
+        const token = req.headers.authorization;
+        const query = req.query.q;
+
+        if (!token || !query) {
+            return res.status(400).json({
+                error: "Missing data"
+            });
+        }
+
+        const usersRes = await axios.get(
+            "https://api.twitch.tv/helix/search/channels",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": token
+                },
+                params: {
+                    query: query,
+                    first: 20
+                }
+            }
+        );
+
+        const result = usersRes.data.data.map(s => ({
+            id: s.id,
+            name: s.display_name,
+            avatar: s.thumbnail_url.replace("{width}", "300").replace("{height}", "300"),
+            isLive: s.is_live
+        }));
+
+        res.json(result);
+
+    } catch (err) {
+
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Search error"
+        });
+    }
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | START

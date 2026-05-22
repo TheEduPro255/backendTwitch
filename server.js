@@ -510,6 +510,41 @@ app.get("/favorites", async (req, res) => {
     }
 });
 
+app.delete("/favorites", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const streamerId = req.query.streamerId;
+
+        if (!token || !streamerId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const userId = userRes.data.data[0].id;
+
+        await Favorite.deleteOne({
+            userId,
+            streamerId
+        });
+
+        res.json({ ok: true });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Delete error" });
+    }
+});
+
 // ---------------- START ----------------
 app.listen(PORT, () => {
     console.log("Servidor en puerto " + PORT);

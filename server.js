@@ -118,13 +118,34 @@ app.get("/callback", async (req, res) => {
 // ---------------- PROFILE (SIN FOLLOWERS) ----------------
 app.get("/profile", async (req, res) => {
 
+    console.log("\n🔥 ===== PROFILE REQUEST =====");
+
     try {
 
-        const token = req.headers.authorization?.replace("Bearer ", "");
+        // ---------------- HEADER RAW ----------------
+        console.log("RAW HEADERS:", req.headers);
 
-        if (!token) {
-            return res.status(401).json({ error: "No token" });
+        const rawAuth = req.headers.authorization;
+        console.log("RAW AUTH HEADER:", rawAuth);
+
+        if (!rawAuth) {
+            console.log("❌ NO AUTH HEADER");
+            return res.status(401).json({ error: "No auth header" });
         }
+
+        // ---------------- TOKEN CLEAN ----------------
+        const token = rawAuth.replace("Bearer ", "").trim();
+
+        console.log("TOKEN CLEAN:", token);
+        console.log("TOKEN LENGTH:", token?.length);
+
+        if (!token || token === "undefined" || token === "null") {
+            console.log("❌ INVALID TOKEN AFTER CLEANING");
+            return res.status(401).json({ error: "Invalid token" });
+        }
+
+        // ---------------- TWITCH CALL ----------------
+        console.log("➡️ CALLING TWITCH /helix/users");
 
         const userRes = await axios.get(
             "https://api.twitch.tv/helix/users",
@@ -136,30 +157,51 @@ app.get("/profile", async (req, res) => {
             }
         );
 
+        console.log("✅ TWITCH RESPONSE OK");
+        console.log("TWITCH DATA:", JSON.stringify(userRes.data, null, 2));
+
         const user = userRes.data?.data?.[0];
 
         if (!user) {
+            console.log("❌ NO USER RETURNED FROM TWITCH");
             return res.status(404).json({ error: "User not found" });
         }
 
-        res.json({
+        // ---------------- RESPONSE ----------------
+        const response = {
             id: user.id,
             username: user.display_name,
             avatar: user.profile_image_url,
             bio: user.description || "",
             createdAt: user.created_at
-        });
+        };
+
+        console.log("📦 FINAL RESPONSE:", response);
+        console.log("🔥 ==========================\n");
+
+        return res.json(response);
 
     } catch (err) {
 
-        console.error("PROFILE ERROR:", err.response?.data || err.message);
+        console.log("\n❌ ===== PROFILE ERROR =====");
 
-        res.status(500).json({
-            error: "Error getting profile"
+        console.log("MESSAGE:", err.message);
+
+        if (err.response) {
+            console.log("STATUS:", err.response.status);
+            console.log("DATA:", err.response.data);
+        }
+
+        console.log("FULL ERROR:", err);
+
+        console.log("🔥 ==========================\n");
+
+        return res.status(500).json({
+            error: "Error getting profile",
+            details: err.response?.data || err.message
         });
     }
 });
-
 
 
 // ---------------- EVENTS ----------------

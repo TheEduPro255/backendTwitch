@@ -62,7 +62,7 @@ const Favorite = mongoose.model("Favorite", favoriteSchema);
 */
 app.get("/login", (req, res) => {
 
-    const scope = "user:read:email user:read:follows user:edit:follows";
+    const scope = "user:read:email user:read:follows";
 
     const url =
         `https://id.twitch.tv/oauth2/authorize` +
@@ -570,6 +570,81 @@ app.delete("/favorites", async (req, res) => {
         res.status(500).json({ error: "Delete failed" });
     }
 });
+
+/*
+|--------------------------------------------------------------------------
+| PROFILE INFO
+|--------------------------------------------------------------------------
+*/
+app.get("/profile", async (req, res) => {
+
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+
+        if (!token) {
+            return res.status(401).json({
+                error: "No token"
+            });
+        }
+
+        // ------------------------------------------------
+        // USER INFO
+        // ------------------------------------------------
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const user = userRes.data.data[0];
+
+        // ------------------------------------------------
+        // FOLLOWERS
+        // ------------------------------------------------
+        const followersRes = await axios.get(
+            "https://api.twitch.tv/helix/channels/followers",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    broadcaster_id: user.id
+                }
+            }
+        );
+
+        const followers = followersRes.data.total || 0;
+
+        // ------------------------------------------------
+        // RESPONSE
+        // ------------------------------------------------
+        res.json({
+            id: user.id,
+            username: user.display_name,
+            avatar: user.profile_image_url,
+            bio: user.description || "",
+            createdAt: user.created_at,
+            followers: followers
+        });
+
+    } catch (err) {
+
+        console.error(
+            err.response?.data || err.message
+        );
+
+        res.status(500).json({
+            error: "Error getting profile"
+        });
+    }
+});
+
 
 /*
 |--------------------------------------------------------------------------

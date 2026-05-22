@@ -242,11 +242,6 @@ app.get("/followed-full", async (req, res) => {
 | 🔥 EVENTO DESTACADO (CORREGIDO)
 |--------------------------------------------------------------------------
 */
-/*
-|--------------------------------------------------------------------------
-| EVENTO DESTACADO
-|--------------------------------------------------------------------------
-*/
 app.get("/events/latest", async (req, res) => {
 
     try {
@@ -258,9 +253,7 @@ app.get("/events/latest", async (req, res) => {
             return res.status(400).json({ error: "Missing data" });
         }
 
-        // ---------------------------------------------------------
-        // 1. Obtener streamers seguidos
-        // ---------------------------------------------------------
+        // STREAMERS SEGUIDOS
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
             {
@@ -278,32 +271,28 @@ app.get("/events/latest", async (req, res) => {
         const followIds = (followsRes.data.data || [])
             .map(f => String(f.broadcaster_id));
 
-        if (followIds.length === 0) {
+        if (!followIds.length) {
             return res.json(null);
         }
 
-        // ---------------------------------------------------------
-        // 2. Buscar eventos válidos
-        // ---------------------------------------------------------
+        // EVENTOS DE STREAMERS SEGUIDOS
+        // EXCLUYENDO LOS DEL USUARIO LOGUEADO
         const events = await Event.find({
-            streamerId: { $in: followIds },
-            userId: { $ne: userId }
+            streamerId: {
+                $in: followIds,
+                $ne: userId
+            }
         });
 
         if (!events.length) {
             return res.json(null);
         }
 
-        // ---------------------------------------------------------
-        // 3. Filtrar eventos futuros
-        // ---------------------------------------------------------
         const now = new Date();
 
+        // EVENTOS FUTUROS
         const futureEvents = events
             .map(event => {
-
-                // date = "2026-05-22"
-                // time = "20:30"
 
                 const eventDate = new Date(
                     `${event.date}T${event.time}:00`
@@ -320,17 +309,12 @@ app.get("/events/latest", async (req, res) => {
             return res.json(null);
         }
 
-        // ---------------------------------------------------------
-        // 4. Ordenar por el más próximo
-        // ---------------------------------------------------------
+        // MÁS PRÓXIMO
         futureEvents.sort(
             (a, b) => a.eventDate - b.eventDate
         );
 
-        // ---------------------------------------------------------
-        // 5. Devolver el más cercano
-        // ---------------------------------------------------------
-        return res.json(futureEvents[0]);
+        res.json(futureEvents[0]);
 
     } catch (err) {
 

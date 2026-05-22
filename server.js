@@ -512,7 +512,6 @@ app.get("/favorites", async (req, res) => {
 
 app.delete("/favorites", async (req, res) => {
     try {
-
         const token = req.headers.authorization?.replace("Bearer ", "");
         const streamerId = req.query.streamerId;
 
@@ -540,7 +539,7 @@ app.delete("/favorites", async (req, res) => {
         res.json({ ok: true });
 
     } catch (err) {
-        console.error(err);
+        console.error(err.response?.data || err.message);
         res.status(500).json({ error: "Delete error" });
     }
 });

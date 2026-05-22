@@ -641,21 +641,29 @@ app.get("/followers", async (req, res) => {
             }
         );
 
-        const total = followersRes.data?.total || 0;
+        const total = followersRes.data?.total;
 
-        res.json({
+        if (typeof total !== "number") {
+            return res.json({
+                userId,
+                followers: 0
+            });
+        }
+
+        return res.json({
             userId,
             followers: total
         });
 
     } catch (err) {
 
-        console.error(
-            err.response?.data || err.message
-        );
+        console.error("FOLLOWERS ERROR:");
+        console.error(err.response?.data || err.message);
 
-        res.status(500).json({
-            error: "Error getting followers"
+       
+        return res.json({
+            userId: req.query.userId,
+            followers: 0
         });
     }
 });

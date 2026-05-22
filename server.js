@@ -458,6 +458,41 @@ app.get("/search-streamers", async (req, res) => {
     }
 });
 
+app.post("/follow", async (req, res) => {
+    try {
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        if (!token) return res.status(401).json({ error: "No token" });
+
+        const { streamerId, streamerName, streamerAvatar } = req.body;
+
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const user = userRes.data.data[0];
+
+        await Favorite.create({
+            userId: user.id,
+            streamerId,
+            streamerName,
+            streamerAvatar
+        });
+
+        res.json({ ok: true });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Follow error" });
+    }
+});
+
+
 // ---------------- START ----------------
 app.listen(PORT, () => {
     console.log("Servidor en puerto " + PORT);

@@ -253,7 +253,9 @@ app.get("/events/latest", async (req, res) => {
             return res.status(400).json({ error: "Missing data" });
         }
 
+        // ------------------------------------------------
         // STREAMERS SEGUIDOS
+        // ------------------------------------------------
         const followsRes = await axios.get(
             "https://api.twitch.tv/helix/channels/followed",
             {
@@ -271,26 +273,33 @@ app.get("/events/latest", async (req, res) => {
         const followIds = (followsRes.data.data || [])
             .map(f => String(f.broadcaster_id));
 
+        console.log("USER LOGGED:", userId);
+
+        console.log("FOLLOW IDS:", followIds);
+
         if (!followIds.length) {
             return res.json(null);
         }
 
-        // EVENTOS DE STREAMERS SEGUIDOS
-        // EXCLUYENDO LOS DEL USUARIO LOGUEADO
+        // ------------------------------------------------
+        // EVENTOS
+        // ------------------------------------------------
         const events = await Event.find({
-            streamerId: {
-                $in: followIds,
-                $ne: userId
-            }
+            streamerId: { $in: followIds },
+            userId: { $ne: userId }
         });
+
+        console.log("EVENTS FOUND:", events);
 
         if (!events.length) {
             return res.json(null);
         }
 
+        // ------------------------------------------------
+        // EVENTOS FUTUROS
+        // ------------------------------------------------
         const now = new Date();
 
-        // EVENTOS FUTUROS
         const futureEvents = events
             .map(event => {
 
@@ -305,11 +314,15 @@ app.get("/events/latest", async (req, res) => {
             })
             .filter(event => event.eventDate > now);
 
+        console.log("FUTURE EVENTS:", futureEvents);
+
         if (!futureEvents.length) {
             return res.json(null);
         }
 
-        // MÁS PRÓXIMO
+        // ------------------------------------------------
+        // MÁS CERCANO
+        // ------------------------------------------------
         futureEvents.sort(
             (a, b) => a.eventDate - b.eventDate
         );

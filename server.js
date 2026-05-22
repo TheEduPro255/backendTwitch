@@ -448,6 +448,52 @@ app.get("/search-streamers", async (req, res) => {
     }
 });
 
+app.post("/follow", async (req, res) => {
+
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const { streamerId } = req.body;
+
+        if (!token || !streamerId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const userId = userRes.data.data[0].id;
+
+        await axios.post(
+            "https://api.twitch.tv/helix/users/follows",
+            {
+                from_id: userId,
+                to_id: streamerId
+            },
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Follow failed" });
+    }
+});
+
 
 /*
 |--------------------------------------------------------------------------

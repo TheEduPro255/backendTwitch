@@ -51,7 +51,7 @@ const Event = mongoose.model("Event", eventSchema);
 */
 app.get("/login", (req, res) => {
 
-    const scope = "user:read:email user:read:follows";
+    const scope = "user:read:email user:read:follows user:edit:follows";
 
     const url =
         `https://id.twitch.tv/oauth2/authorize` +

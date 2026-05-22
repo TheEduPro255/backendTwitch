@@ -44,6 +44,17 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model("Event", eventSchema);
 
+const favoriteSchema = new mongoose.Schema({
+    userId: String,        // quien sigue
+    streamerId: String,
+    streamerName: String,
+    streamerAvatar: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Favorite = mongoose.model("Favorite", favoriteSchema);
+
+
 /*
 |--------------------------------------------------------------------------
 | LOGIN TWITCH
@@ -453,12 +464,15 @@ app.post("/follow", async (req, res) => {
     try {
 
         const token = req.headers.authorization?.replace("Bearer ", "");
-        const { streamerId } = req.body;
+        const { streamerId, streamerName, streamerAvatar } = req.body;
 
         if (!token || !streamerId) {
             return res.status(400).json({ error: "Missing data" });
         }
 
+        // ------------------------------------------------
+        // USER ID (quien sigue)
+        // ------------------------------------------------
         const userRes = await axios.get(
             "https://api.twitch.tv/helix/users",
             {
@@ -471,36 +485,45 @@ app.post("/follow", async (req, res) => {
 
         const userId = userRes.data.data[0].id;
 
+       
         await axios.post(
-    "https://api.twitch.tv/helix/users/follows",
-    null,
-    {
-        headers: {
-            "Client-Id": CLIENT_ID,
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-        },
-        params: {
-            from_id: userId,
-            to_id: streamerId
-        }
-    }
-);
+            "https://api.twitch.tv/helix/users/follows",
+            null,
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    from_id: userId,
+                    to_id: streamerId
+                }
+            }
+        );
+
+        await Favorite.findOneAndUpdate(
+            { userId, streamerId },
+            {
+                userId,
+                streamerId,
+                streamerName,
+                streamerAvatar
+            },
+            { upsert: true, new: true }
+        );
 
         res.json({ success: true });
 
     } catch (err) {
-    console.log("🔥 TWITCH FOLLOW ERROR FULL:");
-    console.log(err.response?.status);
-    console.log(err.response?.data);
-    console.log(err.message);
 
-    res.status(500).json({
-        error: err.response?.data || err.message
-    });
-}
+        console.log("🔥 FOLLOW ERROR:");
+        console.log(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Follow failed"
+        });
+    }
 });
-
 
 /*
 |--------------------------------------------------------------------------

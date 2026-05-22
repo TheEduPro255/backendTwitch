@@ -460,7 +460,9 @@ app.get("/search-streamers", async (req, res) => {
 });
 
 app.post("/follow", async (req, res) => {
-
+    console.log("🔥 /follow HIT");
+    console.log("BODY:", req.body);
+    console.log("AUTH:", req.headers.authorization);
     try {
 
         const token = req.headers.authorization?.replace("Bearer ", "");

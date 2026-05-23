@@ -415,7 +415,7 @@ app.get("/events/following", async (req, res) => {
 });
 
 
-// ---------------- SEARCH STREAMERS ----------------
+
 // ---------------- SEARCH STREAMERS ----------------
 app.get("/search-streamers", async (req, res) => {
 
@@ -623,6 +623,46 @@ app.get("/events/next", async (req, res) => {
         res.status(500).json({ error: "Error next event" });
     }
 });
+
+// ---------------- FOLLOWERS ----------------
+app.get("/followers", async (req, res) => {
+
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const broadcasterId = req.query.broadcasterId;
+
+        if (!token || !broadcasterId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/channels/followers",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    broadcaster_id: broadcasterId
+                }
+            }
+        );
+
+        res.json({
+            total: response.data.total || 0
+        });
+
+    } catch (err) {
+
+        console.error(err.response?.data || err.message);
+
+        res.status(500).json({
+            error: "Error getting followers"
+        });
+    }
+});
+
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

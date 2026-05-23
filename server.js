@@ -582,6 +582,47 @@ app.get("/subs", async (req, res) => {
     }
 });
 
+app.get("/events/next", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        if (!token) return res.status(401).json({ error: "No token" });
+
+        const userRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const userId = userRes.data.data[0].id;
+
+        const events = await Event.find({
+            streamerId: userId
+        });
+
+        const now = new Date();
+
+        const next = events
+            .map(e => ({
+                ...e.toObject(),
+                eventDate: new Date(`${e.date}T${e.time}`)
+            }))
+            .filter(e => e.eventDate > now)
+            .sort((a, b) => a.eventDate - b.eventDate);
+
+        if (!next.length) return res.json(null);
+
+        res.json(next[0]);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error next event" });
+    }
+});
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

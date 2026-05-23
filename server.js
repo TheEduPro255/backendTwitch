@@ -48,7 +48,7 @@ const Favorite = mongoose.model("Favorite", favoriteSchema);
 // ---------------- LOGIN ----------------
 app.get("/login", (req, res) => {
 
-    const scope = "user:read:email user:read:follows";
+    const scope = "user:read:email user:read:follows channel:read:subscriptions";
 
     const url =
         `https://id.twitch.tv/oauth2/authorize` +
@@ -544,6 +544,44 @@ app.delete("/favorites", async (req, res) => {
         res.status(500).json({ error: "Delete error" });
     }
 });
+
+app.get("/subs", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const broadcasterId = req.query.broadcasterId;
+
+        if (!token || !broadcasterId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/subscriptions",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    broadcaster_id: broadcasterId,
+                    first: 100
+                }
+            }
+        );
+
+        const totalSubs = response.data.total || response.data.data.length;
+
+        res.json({
+            total: totalSubs,
+            subs: response.data.data
+        });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "Error getting subs" });
+    }
+});
+
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

@@ -416,6 +416,7 @@ app.get("/events/following", async (req, res) => {
 
 
 // ---------------- SEARCH STREAMERS ----------------
+// ---------------- SEARCH STREAMERS ----------------
 app.get("/search-streamers", async (req, res) => {
 
     try {
@@ -435,7 +436,7 @@ app.get("/search-streamers", async (req, res) => {
                     "Authorization": `Bearer ${token}`
                 },
                 params: {
-                    query: query,
+                    query,
                     first: 20
                 }
             }
@@ -444,7 +445,7 @@ app.get("/search-streamers", async (req, res) => {
         const data = response.data.data || [];
 
         const result = data.map(s => ({
-            id: s.broadcaster_id,
+            id: s.id, // 🔥 ESTE ES EL CAMBIO
             name: s.display_name,
             avatar: s.thumbnail_url,
             isLive: s.is_live

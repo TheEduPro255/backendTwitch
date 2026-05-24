@@ -682,21 +682,20 @@ app.get("/followers/details", async (req, res) => {
                 },
                 params: {
                     broadcaster_id: broadcasterId,
-                    first: 20
+                    first: 5   // 👈 SOLO ESTO IMPORTA
                 }
             }
         );
 
-        const followers = (response.data.data || []).map(f => ({
-            userId: f.user_id,
-            userName: f.user_name,
-            avatar: "", // 👈 Twitch NO da avatar aquí
-            followedAt: f.followed_at
-        }));
+        const data = response.data;
 
         return res.json({
-            total: response.data.total || 0,
-            followers
+            total: data.total || 0,
+            followers: (data.data || []).map(f => ({
+                userId: f.user_id,
+                userName: f.user_name,
+                followedAt: f.followed_at
+            }))
         });
 
     } catch (err) {

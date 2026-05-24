@@ -713,6 +713,42 @@ app.get("/followers/details", async (req, res) => {
     }
 });
 
+app.get("/users/batch", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const ids = req.query.ids; // "1,2,3"
+
+        if (!token || !ids) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    id: ids.split(",")
+                }
+            }
+        );
+
+        const users = response.data.data.map(u => ({
+            id: u.id,
+            name: u.display_name,
+            avatar: u.profile_image_url
+        }));
+
+        res.json(users);
+
+    } catch (err) {
+        res.status(500).json({ error: "Error users batch" });
+    }
+});
+
 // ---------------- START ----------------
 app.listen(PORT, () => {
     console.log("Servidor en puerto " + PORT);

@@ -673,6 +673,7 @@ app.get("/followers/details", async (req, res) => {
             return res.status(400).json({ error: "Missing data" });
         }
 
+        // 1. followers (solo IDs)
         const response = await axios.get(
             "https://api.twitch.tv/helix/channels/followers",
             {
@@ -682,20 +683,52 @@ app.get("/followers/details", async (req, res) => {
                 },
                 params: {
                     broadcaster_id: broadcasterId,
-                    first: 5   // 👈 SOLO ESTO IMPORTA
+                    first: 5
                 }
             }
         );
 
-        const data = response.data;
+        const followersRaw = response.data.data || [];
+        const userIds = followersRaw.map(f => f.user_id);
 
-        return res.json({
-            total: data.total || 0,
-            followers: (data.data || []).map(f => ({
+        if (userIds.length === 0) {
+            return res.json({
+                total: response.data.total || 0,
+                followers: []
+            });
+        }
+
+        // 2. pedir datos de usuarios (avatars)
+        const usersRes = await axios.get(
+            "https://api.twitch.tv/helix/users",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    id: userIds
+                }
+            }
+        );
+
+        const users = usersRes.data.data || [];
+
+        // 3. merge follower + user info
+        const followers = followersRaw.map(f => {
+            const userInfo = users.find(u => u.id === f.user_id);
+
+            return {
                 userId: f.user_id,
                 userName: f.user_name,
+                avatar: userInfo?.profile_image_url || "",
                 followedAt: f.followed_at
-            }))
+            };
+        });
+
+        return res.json({
+            total: response.data.total || 0,
+            followers
         });
 
     } catch (err) {

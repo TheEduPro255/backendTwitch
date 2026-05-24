@@ -668,6 +668,7 @@ app.get("/followers/details", async (req, res) => {
 
         const token = req.headers.authorization?.replace("Bearer ", "");
         const broadcasterId = req.query.broadcasterId;
+           
 
         if (!token || !broadcasterId) {
             return res.status(400).json({ error: "Missing data" });
@@ -689,6 +690,8 @@ app.get("/followers/details", async (req, res) => {
         );
 
         const data = response.data;
+        console.log("BROADCASTER ID:", broadcasterId);
+        console.log("RAW TWITCH RESPONSE:", JSON.stringify(response.data, null, 2)); 
 
         // 🔥 2. Normalizar followers
         const followers = (data.data || []).map(f => ({

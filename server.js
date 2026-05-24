@@ -663,6 +663,55 @@ app.get("/followers", async (req, res) => {
     }
 });
 
+app.get("/followers/details", async (req, res) => {
+    try {
+
+        const token = req.headers.authorization?.replace("Bearer ", "");
+        const broadcasterId = req.query.broadcasterId;
+
+        if (!token || !broadcasterId) {
+            return res.status(400).json({ error: "Missing data" });
+        }
+
+        // 🔥 1. Followers desde Twitch
+        const response = await axios.get(
+            "https://api.twitch.tv/helix/channels/followers",
+            {
+                headers: {
+                    "Client-Id": CLIENT_ID,
+                    "Authorization": `Bearer ${token}`
+                },
+                params: {
+                    broadcaster_id: broadcasterId,
+                    first: 20
+                }
+            }
+        );
+
+        const data = response.data;
+
+        // 🔥 2. Normalizar followers
+        const followers = (data.data || []).map(f => ({
+            userId: f.user_id,
+            userName: f.user_name,
+            followedAt: f.followed_at
+        }));
+
+        // 🔥 3. Respuesta limpia para Android
+        return res.json({
+            total: data.total || 0,
+            count: followers.length,
+            followers
+        });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+
+        return res.status(500).json({
+            error: "Error getting followers details"
+        });
+    }
+});
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

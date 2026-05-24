@@ -720,11 +720,16 @@ app.get("/users/batch", async (req, res) => {
     try {
 
         const token = req.headers.authorization?.replace("Bearer ", "");
-        const ids = req.query.ids; // "1,2,3"
+        const ids = req.query.ids;
 
         if (!token || !ids) {
             return res.status(400).json({ error: "Missing data" });
         }
+
+        const idsArray = ids.split(",");
+
+        const params = new URLSearchParams();
+        idsArray.forEach(id => params.append("id", id));
 
         const response = await axios.get(
             "https://api.twitch.tv/helix/users",
@@ -733,9 +738,7 @@ app.get("/users/batch", async (req, res) => {
                     "Client-Id": CLIENT_ID,
                     "Authorization": `Bearer ${token}`
                 },
-                params: {
-                    id: ids.split(",")
-                }
+                params
             }
         );
 
@@ -748,6 +751,7 @@ app.get("/users/batch", async (req, res) => {
         res.json(users);
 
     } catch (err) {
+        console.error("users/batch error:", err.response?.data || err.message);
         res.status(500).json({ error: "Error users batch" });
     }
 });

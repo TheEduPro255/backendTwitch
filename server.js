@@ -668,13 +668,11 @@ app.get("/followers/details", async (req, res) => {
 
         const token = req.headers.authorization?.replace("Bearer ", "");
         const broadcasterId = req.query.broadcasterId;
-           
 
         if (!token || !broadcasterId) {
             return res.status(400).json({ error: "Missing data" });
         }
 
-        // 🔥 1. Followers desde Twitch
         const response = await axios.get(
             "https://api.twitch.tv/helix/channels/followers",
             {
@@ -689,72 +687,24 @@ app.get("/followers/details", async (req, res) => {
             }
         );
 
-        const data = response.data;
-        console.log("BROADCASTER ID:", broadcasterId);
-        console.log("RAW TWITCH RESPONSE:", JSON.stringify(response.data, null, 2)); 
-
-        // 🔥 2. Normalizar followers
-        const followers = (data.data || []).map(f => ({
+        const followers = (response.data.data || []).map(f => ({
             userId: f.user_id,
             userName: f.user_name,
+            avatar: "", // 👈 Twitch NO da avatar aquí
             followedAt: f.followed_at
         }));
 
-        // 🔥 3. Respuesta limpia para Android
         return res.json({
-            total: data.total || 0,
-            count: followers.length,
+            total: response.data.total || 0,
             followers
         });
 
     } catch (err) {
         console.error(err.response?.data || err.message);
-
-        return res.status(500).json({
-            error: "Error getting followers details"
-        });
+        return res.status(500).json({ error: "Error followers details" });
     }
 });
 
-app.get("/users/batch", async (req, res) => {
-    try {
-
-        const token = req.headers.authorization?.replace("Bearer ", "");
-        const ids = req.query.ids;
-
-        if (!token || !ids) {
-            return res.status(400).json({ error: "Missing data" });
-        }
-
-        const idsArray = ids.split(",");
-
-        const params = new URLSearchParams();
-        idsArray.forEach(id => params.append("id", id));
-
-        const response = await axios.get(
-            "https://api.twitch.tv/helix/users",
-            {
-                headers: {
-                    "Client-Id": CLIENT_ID,
-                    "Authorization": `Bearer ${token}`
-                },
-                params
-            }
-        );
-
-        const users = response.data.data.map(u => ({
-            id: u.id,
-            name: u.display_name,
-            avatar: u.profile_image_url
-        }));
-
-        res.json(users);
-
-    } catch (err) {
-        console.error("users/batch error:", err.response?.data || err.message);
-        res.status(500).json({ error: "Error users batch" });
-    }
-});
 
 // ---------------- START ----------------
 app.listen(PORT, () => {

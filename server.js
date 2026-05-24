@@ -48,7 +48,7 @@ const Favorite = mongoose.model("Favorite", favoriteSchema);
 // ---------------- LOGIN ----------------
 app.get("/login", (req, res) => {
 
-    const scope = "user:read:email user:read:follows user:read:followers channel:read:subscriptions";
+    const scope = "user:read:email user:read:follows moderator:read:followers channel:read:subscriptions";
 
     const url =
         `https://id.twitch.tv/oauth2/authorize` +
